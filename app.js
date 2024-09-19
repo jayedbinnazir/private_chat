@@ -9,8 +9,6 @@ const {
   globalErrorHandler,
 } = require("./middlewares/common/errorHandler");
 
-const decorateHtml = require("./middlewares/common/decorateHtml.js");
-
 //import routers
 const loginRouter = require("./routers/loginRouter");
 const inboxRouter = require("./routers/inboxRouter");
@@ -25,9 +23,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.set("view engine", "ejs");
 
 //router setup
-app.use("/", decorateHtml("Login"), loginRouter);
-app.use("/users", decorateHtml("Users"), usersRouter);
-app.use("/inbox", decorateHtml("Inbox"), inboxRouter);
+app.use("/", loginRouter);
+app.use("/users", usersRouter);
+app.use("/inbox", inboxRouter);
 
 //404
 app.use(notFoundError);

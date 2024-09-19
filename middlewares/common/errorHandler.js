@@ -9,6 +9,8 @@ const globalErrorHandler = (err, req, res, next) => {
   res.locals.error =
     Config.NODE_ENV === "development" ? err : { message: err.message };
 
+  res.status(err.status || 500);
+
   if (res.locals.html) {
     res.render("error", {
       title: "Error Page",
