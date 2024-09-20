@@ -11,12 +11,14 @@ const {
   addValidators,
   addUserValidationHandler,
 } = require("../middlewares/users/userValidators");
+const { checkLogin } = require("../middlewares/common/authgaurd");
 
 const router = express.Router();
 
-router.get("/", decorateHtml("Users"), usersController);
+router.get("/", decorateHtml("Users"), checkLogin, usersController);
 router.post(
   "/",
+  checkLogin,
   avatarUpload,
   addValidators,
   addUserValidationHandler,
