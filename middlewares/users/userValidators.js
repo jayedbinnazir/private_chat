@@ -1,74 +1,81 @@
-const createError = require("http-errors");
+// external imports
 const { check, validationResult } = require("express-validator");
-const PeopleModel = require("../../models/People");
-const fs = require("node:fs");
-const path = require("node:path");
+const createError = require("http-errors");
+const path = require("path");
+const { unlink } = require("fs");
 
-const addValidators = [
+// internal imports
+const User = require("../../models/People");
+
+// add user
+const addUserValidators = [
   check("name")
-    .trim()
-    .notEmpty()
+    .isLength({ min: 1 })
     .withMessage("Name is required")
-    .isAlpha("en-US", { ignore: " " })
-    .withMessage("Name must contain only letters and spaces"),
-
+    .isAlpha("en-US", { ignore: " -" })
+    .withMessage("Name must not contain anything other than alphabet")
+    .trim(),
   check("email")
-    .trim()
     .isEmail()
-    .withMessage("Invalid email format")
-    .normalizeEmail()
-    .custom(async (value) => {
-      try {
-        const user = await PeopleModel.findOne({ email: value });
-        if (user) {
-          throw createError("Email already in use");
-        }
-      } catch (err) {
-        throw createError(err.message);
-      }
-    }),
-
-  check("mobile")
+    .withMessage("Invalid email address")
     .trim()
-    .matches(/^01[3-9]\d{8}$/)
-    .withMessage("Mobile number must be a valid Bangladeshi number")
     .custom(async (value) => {
       try {
-        const user = await PeopleModel.findOne({ mobile: value });
+        const user = await User.findOne({ email: value });
         if (user) {
-          throw createError("Mobile Number already in use");
+          throw createError("Email already is use!");
         }
       } catch (err) {
         throw createError(err.message);
       }
     }),
-
+  check("mobile")
+    .isMobilePhone("bn-BD", {
+      strictMode: true,
+    })
+    .withMessage("Mobile number must be a valid Bangladeshi mobile number")
+    .custom(async (value) => {
+      try {
+        const user = await User.findOne({ mobile: value });
+        if (user) {
+          throw createError("Mobile already is use!");
+        }
+      } catch (err) {
+        throw createError(err.message);
+      }
+    }),
   check("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 characters long"),
+    .isStrongPassword()
+    .withMessage(
+      "Password must be at least 8 characters long & should contain at least 1 lowercase, 1 uppercase, 1 number & 1 symbol"
+    ),
 ];
 
-const addUserValidationHandler = (req, res, next) => {
-  const result = validationResult(req);
-  console.log(result.mapped());
-  if (result.isEmpty()) {
+const addUserValidationHandler = function (req, res, next) {
+  const errors = validationResult(req);
+  const mappedErrors = errors.mapped();
+  if (Object.keys(mappedErrors).length === 0) {
     next();
   } else {
-    // Remove uploaded file in case of validation error
+    // remove uploaded files
     if (req.files.length > 0) {
-      fs.unlink(req.files[0].path, (err) => {
-        if (err) {
-          console.error(`Error deleting file ${req.files[0].path}:`, err);
-        } else {
-          console.log(`File ${req.files[0].path} deleted successfully`);
+      const { filename } = req.files[0];
+      unlink(
+        path.join(__dirname, `/../public/uploads/avatars/${filename}`),
+        (err) => {
+          if (err) console.log(err);
         }
-      });
+      );
     }
-    res.status(422).json({ errors: result.mapped() });
+
+    // response the errors
+    res.status(500).json({
+      errors: mappedErrors,
+    });
   }
 };
 
 module.exports = {
-  addValidators,
+  addUserValidators,
   addUserValidationHandler,
 };

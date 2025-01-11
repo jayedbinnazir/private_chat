@@ -1,35 +1,33 @@
+// external imports
 const express = require("express");
-const ejs = require("ejs");
-const app = express();
-const path = require("node:path");
-const cookieParser = require("cookie-parser");
-const { Config } = require("./Config");
+
+// internal imports
 const {
-  notFoundError,
-  globalErrorHandler,
-} = require("./middlewares/common/errorHandler");
+  getInbox,
+  searchUser,
+  addConversation,
+  getMessages,
+  sendMessage,
+} = require("./controller/inboxController");
+const decorateHtmlResponse = require("./middlewares/common/decorateHtmlResponse");
+const { checkLogin } = require("./middlewares/common/checkLogin");
+const attachmentUpload = require("./middlewares/inbox/attachmentUpload");
 
-//import routers
-const loginRouter = require("./routers/loginRouter");
-const inboxRouter = require("./routers/inboxRouter");
-const usersRouter = require("./routers/usersRouter");
+const router = express.Router();
 
-app.use(cookieParser(Config.COOKIE_SECRET));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
+// inbox page
+router.get("/", decorateHtmlResponse("Inbox"), checkLogin, getInbox);
 
-//setup view-engine
-app.set("view engine", "ejs");
+// search user for conversation
+router.post("/search", checkLogin, searchUser);
 
-//router setup
-app.use("/", loginRouter);
-app.use("/users", usersRouter);
-app.use("/inbox", inboxRouter);
+// add conversation
+router.post("/conversation", checkLogin, addConversation);
 
-//404
-app.use(notFoundError);
-//global error
-app.use(globalErrorHandler);
+// get messages of a conversation
+router.get("/messages/:conversation_id", checkLogin, getMessages);
 
-module.exports = app;
+// send message
+router.post("/message", checkLogin, attachmentUpload, sendMessage);
+
+module.exports = router;
